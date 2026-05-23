@@ -1434,7 +1434,7 @@ async function addTitle() {
   addStatus.innerHTML = '<span class="loader"></span>Buscando informações...';
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jolly-firefly-f54f.bielbrandao07.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1515,7 +1515,7 @@ async function sendChat() {
   const catalogSummary = catalog.map(i => `${i.titulo_pt} (${i.tipo}, ${i.ano})`).join(', ');
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://jolly-firefly-f54f.bielbrandao07.workers.dev', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
