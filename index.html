@@ -1,0 +1,1414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Minha Lista" />
+  <meta name="theme-color" content="#080810" />
+  <title>Minha Lista</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+
+
+  <style>
+    :root {
+      --bg:        #080810;
+      --surface:   #0f0f1a;
+      --card:      #13131f;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #e8c87a;
+      --accent2:   #7a9ee8;
+      --text:      #e8e6e0;
+      --muted:     #6b6880;
+      --film:      #e8c87a;
+      --serie:     #7ab8e8;
+      --safe-top:  env(safe-area-inset-top, 0px);
+      --safe-bot:  env(safe-area-inset-bottom, 0px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    /* ── LAYOUT ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 430px;
+      margin: 0 auto;
+    }
+
+    /* ── HEADER ── */
+    header {
+      padding: calc(var(--safe-top) + 18px) 20px 0;
+      background: var(--bg);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 10;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .brand h1 {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 32px;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .brand h1 span { color: var(--accent); font-style: italic; }
+
+    .brand p {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .stats {
+      display: flex;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .stat-item { text-align: right; }
+    .stat-item .num {
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-item .lbl {
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── FILTERS ── */
+    .filters {
+      display: flex;
+      gap: 8px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .search-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    input[type=text] {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px 9px 32px;
+      color: var(--text);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+      font-size: 12px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    input[type=text]:focus { border-color: rgba(232,200,122,0.3); }
+    input[type=text]::placeholder { color: var(--muted); }
+
+    .filter-btns { display: flex; gap: 4px; }
+
+    .filter-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s;
+    }
+
+    .filter-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(232,200,122,0.08);
+    }
+
+    /* ── LIST ── */
+    #list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #list::-webkit-scrollbar { display: none; }
+
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .empty svg { opacity: 0.3; }
+
+    /* ── CARD ── */
+    .card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+      border-radius: 2px;
+      position: relative;
+    }
+
+    .card:last-child { border-bottom: none; }
+    .card:active { background: rgba(255,255,255,0.02); }
+
+    .card-index {
+      font-size: 11px;
+      color: var(--muted);
+      min-width: 24px;
+      text-align: right;
+      padding-top: 2px;
+      flex-shrink: 0;
+    }
+
+    .card-body { flex: 1; min-width: 0; }
+
+    .card-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 16px;
+      color: var(--text);
+      line-height: 1.2;
+      margin-bottom: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .type-badge {
+      font-size: 8px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .type-badge.filme {
+      background: rgba(232,200,122,0.12);
+      color: var(--film);
+      border: 1px solid rgba(232,200,122,0.2);
+    }
+
+    .type-badge.serie {
+      background: rgba(122,158,232,0.12);
+      color: var(--serie);
+      border: 1px solid rgba(122,158,232,0.2);
+    }
+
+    .card-year { font-size: 11px; color: var(--muted); }
+
+    .card-genres {
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 4px;
+    }
+
+    .card-right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+      flex-shrink: 0;
+      padding-top: 2px;
+    }
+
+    .imdb-score {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .imdb-star { color: var(--accent); font-size: 12px; }
+    .imdb-num { font-size: 13px; font-weight: 500; color: var(--accent); }
+
+    .card-dir { font-size: 9px; color: var(--muted); text-align: right; max-width: 100px; line-height: 1.3; }
+
+    /* ── ADD BAR ── */
+    #add-bar {
+      padding: 12px 16px calc(var(--safe-bot) + 12px);
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+
+    .add-inner {
+      display: flex;
+      gap: 8px;
+    }
+
+    #add-input {
+      padding-left: 12px;
+    }
+
+    #add-btn {
+      background: var(--accent);
+      color: #080810;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 16px;
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity .15s;
+      letter-spacing: 0.5px;
+    }
+
+    #add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #add-status {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+      min-height: 14px;
+      padding: 0 2px;
+      transition: color .2s;
+    }
+
+    #add-status.error { color: #e87a7a; }
+    #add-status.success { color: #7ae8a0; }
+
+    /* ── MODAL ── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 100;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      align-items: flex-end;
+    }
+
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px 20px 0 0;
+      padding: 0 0 calc(var(--safe-bot) + 20px);
+      width: 100%;
+      max-height: 88dvh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      animation: slide-up .25s cubic-bezier(.32,.72,0,1);
+    }
+
+    #modal::-webkit-scrollbar { display: none; }
+
+    @keyframes slide-up {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+
+    .modal-drag {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 12px auto 0;
+    }
+
+    .modal-header {
+      padding: 20px 20px 0;
+    }
+
+    .modal-type-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .modal-title {
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 26px;
+      line-height: 1.15;
+      color: var(--text);
+    }
+
+    .modal-title-en {
+      font-size: 12px;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 4px;
+    }
+
+    .modal-score-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 16px 20px;
+      padding: 14px 16px;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .modal-imdb {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .modal-imdb .big-score {
+      font-size: 32px;
+      font-weight: 500;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .modal-imdb .score-label {
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .score-divider {
+      width: 1px;
+      height: 36px;
+      background: var(--border);
+    }
+
+    .modal-genres {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .genre-pill {
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: rgba(255,255,255,0.03);
+    }
+
+    .modal-section {
+      padding: 0 20px;
+      margin-bottom: 16px;
+    }
+
+    .section-label {
+      font-size: 8px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .section-value {
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .section-value.highlight { color: var(--accent2); }
+
+    .sinopse-block {
+      padding: 14px 16px;
+      background: var(--surface);
+      border-radius: 10px;
+      border-left: 2px solid var(--accent);
+      font-size: 13px;
+      line-height: 1.8;
+      color: #b0aeb8;
+    }
+
+    .close-modal {
+      display: block;
+      margin: 8px 20px 0;
+      padding: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--muted);
+      font-family: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, monospace;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      width: calc(100% - 40px);
+      transition: all .15s;
+    }
+
+    .close-modal:active { background: rgba(255,255,255,0.05); }
+
+    /* ── LOADER ── */
+    .loader {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(232,200,122,0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── DIVIDERS ── */
+    .list-section-title {
+      font-size: 8px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 16px 0 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="header-top">
+      <div class="brand">
+        <h1>Minha <span>Lista</span></h1>
+        <p>Letterbox Pessoal</p>
+      </div>
+      <div class="stats">
+        <div class="stat-item">
+          <div class="num" id="stat-filmes">0</div>
+          <div class="lbl">Filmes</div>
+        </div>
+        <div class="stat-item">
+          <div class="num" id="stat-series">0</div>
+          <div class="lbl">Séries</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="search-wrap">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" id="search" placeholder="Buscar título, gênero..." autocomplete="off" autocorrect="off" />
+    </div>
+    <div class="filter-btns">
+      <button class="filter-btn active" data-f="todos">Todos</button>
+      <button class="filter-btn" data-f="filme">Filmes</button>
+      <button class="filter-btn" data-f="serie">Séries</button>
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+  <div id="add-bar">
+    <div class="add-inner">
+      <input type="text" id="add-input" placeholder="Adicionar título..." autocomplete="off" autocorrect="off" />
+      <button id="add-btn">+ Salvar</button>
+    </div>
+    <div id="add-status"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-drag"></div>
+    <div id="modal-content"></div>
+    <button class="close-modal" onclick="closeModal()">Fechar</button>
+  </div>
+</div>
+
+<script>
+const CATALOG = [
+  {
+    slug: "silo-2023", titulo_pt: "Silo", titulo_en: "Silo", tipo: "Série", ano: 2023,
+    genero: ["Ficção Científica", "Drama", "Mistério"],
+    nota_imdb: 7.7, diretor: "Graham Yost",
+    elenco: ["Rebecca Ferguson", "Common", "Tim Robbins", "Harriet Walter", "David Oyelowo"],
+    onde_assistir: ["Apple TV+"],
+    sinopse: "Em um futuro distópico, milhares de pessoas vivem em um imenso silo subterrâneo, acreditando que o mundo exterior é tóxico e letal. Quando a engenheira Juliette começa a investigar mortes misteriosas, ela descobre verdades perturbadoras sobre o lugar que chama de lar."
+  },
+  {
+    slug: "tucker-dale-2010", titulo_pt: "Tucker e Dale Contra o Mal", titulo_en: "Tucker & Dale vs. Evil", tipo: "Filme", ano: 2010,
+    genero: ["Terror", "Comédia"],
+    nota_imdb: 7.5, diretor: "Eli Craig",
+    elenco: ["Tyler Labine", "Alan Tudyk", "Katrina Bowden"],
+    onde_assistir: ["Prime Video", "Pluto TV"],
+    sinopse: "Tucker e Dale são dois caipiras bonachões que vão para sua cabana de férias nas montanhas. Um grupo de universitários os confunde com assassinos em série, levando a uma série de acidentes hilários e sangrentos por mal-entendido."
+  },
+  {
+    slug: "super8-2011", titulo_pt: "Super 8", titulo_en: "Super 8", tipo: "Filme", ano: 2011,
+    genero: ["Ficção Científica", "Aventura", "Suspense"],
+    nota_imdb: 7.0, diretor: "J.J. Abrams",
+    elenco: ["Joel Courtney", "Elle Fanning", "Kyle Chandler", "Riley Griffiths"],
+    onde_assistir: ["Prime Video", "Paramount+"],
+    sinopse: "Em 1979, um grupo de adolescentes filma um curta-metragem quando testemunha um acidente de trem misterioso. Enquanto criaturas e eventos estranhos assolam a cidade, eles tentam descobrir o que escapou do trem."
+  },
+  {
+    slug: "fido-2006", titulo_pt: "Fido", titulo_en: "Fido", tipo: "Filme", ano: 2006,
+    genero: ["Comédia", "Terror"],
+    nota_imdb: 6.8, diretor: "Andrew Currie",
+    elenco: ["Carrie-Anne Moss", "Billy Connolly", "Dylan Baker", "Henry Czerny"],
+    onde_assistir: ["Prime Video"],
+    sinopse: "Num subúrbio americano dos anos 1950 alternativos, zumbis domesticados são usados como empregados. Quando o jovem Timmy ganha seu próprio zumbi de estimação, chamado Fido, os dois desenvolvem uma improvável amizade — até Fido escapar e causar caos na vizinhança."
+  },
+  {
+    slug: "310-to-yuma-2007", titulo_pt: "Os Indomáveis", titulo_en: "3:10 to Yuma", tipo: "Filme", ano: 2007,
+    genero: ["Faroeste", "Ação", "Drama"],
+    nota_imdb: 7.7, diretor: "James Mangold",
+    elenco: ["Russell Crowe", "Christian Bale", "Ben Foster", "Peter Fonda"],
+    onde_assistir: ["Prime Video", "Now"],
+    sinopse: "Um fazendeiro falido aceita o perigoso trabalho de escoltar o temido bandido Ben Wade até o trem para Yuma. Durante a jornada tensa, os dois homens desenvolvem um respeito mútuo inesperado enquanto enfrentam a gangue do criminoso."
+  },
+  {
+    slug: "hell-or-high-water-2016", titulo_pt: "A Qualquer Custo", titulo_en: "Hell or High Water", tipo: "Filme", ano: 2016,
+    genero: ["Crime", "Drama", "Faroeste"],
+    nota_imdb: 7.6, diretor: "David Mackenzie",
+    elenco: ["Chris Pine", "Ben Foster", "Jeff Bridges", "Gil Birmingham"],
+    onde_assistir: ["Netflix", "Prime Video"],
+    sinopse: "Dois irmãos texanos realizam uma série de assaltos a bancos para salvar a fazenda da família da execução hipotecária. Um detetive próximo da aposentadoria e seu parceiro os perseguem pelo interior árido do Texas."
+  },
+  {
+    slug: "batman-1989", titulo_pt: "Batman", titulo_en: "Batman", tipo: "Filme", ano: 1989,
+    genero: ["Super-herói", "Ação", "Fantasia"],
+    nota_imdb: 7.5, diretor: "Tim Burton",
+    elenco: ["Michael Keaton", "Jack Nicholson", "Kim Basinger", "Michael Gough"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Bruce Wayne, milionário de Gotham City, assume a identidade secreta do Batman para combater o crime. Seu maior desafio surge quando o criminoso Coringa aterroriza a cidade com uma série de planos macabros e mortais."
+  },
+  {
+    slug: "batman-returns-1992", titulo_pt: "Batman: O Retorno", titulo_en: "Batman Returns", tipo: "Filme", ano: 1992,
+    genero: ["Super-herói", "Ação", "Fantasia"],
+    nota_imdb: 7.1, diretor: "Tim Burton",
+    elenco: ["Michael Keaton", "Danny DeVito", "Michelle Pfeiffer", "Christopher Walken"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Batman enfrenta dois novos vilões: o sinistro Pinguim, criado nos esgotos de Gotham, e a sedutora Mulher-Gato, ex-assistente que ganhou poderes felinos. Entre os três há uma dança de alianças e traições."
+  },
+  {
+    slug: "batman-forever-1995", titulo_pt: "Batman Eternamente", titulo_en: "Batman Forever", tipo: "Filme", ano: 1995,
+    genero: ["Super-herói", "Ação"],
+    nota_imdb: 5.4, diretor: "Joel Schumacher",
+    elenco: ["Val Kilmer", "Tommy Lee Jones", "Jim Carrey", "Nicole Kidman", "Chris O'Donnell"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Batman enfrenta Duas-Caras e o Charada, que ameaçam Gotham enquanto ele ganha um novo parceiro, Dick Grayson, o Robin. O tom mais colorido e teatral marca uma virada na franquia."
+  },
+  {
+    slug: "batman-robin-1997", titulo_pt: "Batman & Robin", titulo_en: "Batman & Robin", tipo: "Filme", ano: 1997,
+    genero: ["Super-herói", "Ação"],
+    nota_imdb: 3.8, diretor: "Joel Schumacher",
+    elenco: ["George Clooney", "Arnold Schwarzenegger", "Uma Thurman", "Alicia Silverstone", "Chris O'Donnell"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Batman e Robin enfrentam o Senhor Frio e a Hera Venenosa, que planejam congelar Gotham. Amplamente considerado o pior filme da franquia, quase enterrou o Batman nas telas por quase uma década."
+  },
+  {
+    slug: "batman-begins-2005", titulo_pt: "Batman Begins", titulo_en: "Batman Begins", tipo: "Filme", ano: 2005,
+    genero: ["Super-herói", "Ação", "Drama"],
+    nota_imdb: 8.2, diretor: "Christopher Nolan",
+    elenco: ["Christian Bale", "Michael Caine", "Liam Neeson", "Katie Holmes", "Gary Oldman", "Cillian Murphy"],
+    onde_assistir: ["Max", "Prime Video", "Netflix"],
+    sinopse: "A origem de Bruce Wayne: devastado pela morte dos pais, ele viaja pelo mundo em busca de respostas, é treinado pela Liga das Sombras e retorna a Gotham para se tornar o Batman. Um reinício sombrio e realista da franquia."
+  },
+  {
+    slug: "the-dark-knight-2008", titulo_pt: "O Cavaleiro das Trevas", titulo_en: "The Dark Knight", tipo: "Filme", ano: 2008,
+    genero: ["Super-herói", "Ação", "Crime"],
+    nota_imdb: 9.0, diretor: "Christopher Nolan",
+    elenco: ["Christian Bale", "Heath Ledger", "Aaron Eckhart", "Michael Caine", "Gary Oldman", "Maggie Gyllenhaal"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Batman enfrenta o Coringa, um agente do caos com um plano para destruir a alma de Gotham — e de seus heróis. A performance póstuma de Heath Ledger como Coringa é lendária. Considerado um dos maiores filmes de super-herói de todos os tempos."
+  },
+  {
+    slug: "dark-knight-rises-2012", titulo_pt: "O Cavaleiro das Trevas Ressurge", titulo_en: "The Dark Knight Rises", tipo: "Filme", ano: 2012,
+    genero: ["Super-herói", "Ação", "Drama"],
+    nota_imdb: 8.4, diretor: "Christopher Nolan",
+    elenco: ["Christian Bale", "Tom Hardy", "Anne Hathaway", "Joseph Gordon-Levitt", "Marion Cotillard"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Oito anos após os eventos de The Dark Knight, Bruce Wayne é forçado a sair da aposentadoria quando o brutal terrorista Bane toma Gotham como refém. O épico desfecho da trilogia de Nolan."
+  },
+  {
+    slug: "batman-v-superman-2016", titulo_pt: "Batman vs Superman: A Origem da Justiça", titulo_en: "Batman v Superman: Dawn of Justice", tipo: "Filme", ano: 2016,
+    genero: ["Super-herói", "Ação", "Ficção Científica"],
+    nota_imdb: 6.5, diretor: "Zack Snyder",
+    elenco: ["Ben Affleck", "Henry Cavill", "Amy Adams", "Jesse Eisenberg", "Gal Gadot"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Intimidado pelo poder do Superman, Batman decide enfrentá-lo. Os dois são manipulados por Lex Luthor para se destruírem, enquanto uma ameaça ainda maior se aproxima. Introduz a Mulher-Maravilha no universo DC."
+  },
+  {
+    slug: "the-batman-2022", titulo_pt: "Batman", titulo_en: "The Batman", tipo: "Filme", ano: 2022,
+    genero: ["Super-herói", "Crime", "Suspense"],
+    nota_imdb: 7.8, diretor: "Matt Reeves",
+    elenco: ["Robert Pattinson", "Zoë Kravitz", "Paul Dano", "Jeffrey Wright", "Colin Farrell"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "No segundo ano de vigilantismo, Batman investiga uma série de assassinatos perpetrados pelo Charada, que expõe a corrupção nas entranhas de Gotham. Um noir sombrio e visceral que redefine o personagem."
+  },
+  {
+    slug: "the-penguin-2024", titulo_pt: "Pinguim", titulo_en: "The Penguin", tipo: "Série", ano: 2024,
+    genero: ["Crime", "Drama", "Super-herói"],
+    nota_imdb: 8.5, diretor: "Lauren LeFranc",
+    elenco: ["Colin Farrell", "Cristin Milioti", "Rhenzy Feliz", "Michael Zegen"],
+    onde_assistir: ["Max"],
+    sinopse: "Spin-off de The Batman (2022). Oz Cobb, o Pinguim, luta para ascender no submundo criminoso de Gotham após a morte de Carmine Falcone. Uma série de crime intensa, suja e politicamente afiada."
+  },
+  {
+    slug: "in-the-shadow-of-the-moon-2019", titulo_pt: "Sombra Lunar", titulo_en: "In the Shadow of the Moon", tipo: "Filme", ano: 2019,
+    genero: ["Ficção Científica", "Suspense", "Crime"],
+    nota_imdb: 6.0, diretor: "Jim Mickle",
+    elenco: ["Boyd Holbrook", "Cleopatra Coleman", "Bokeem Woodbine", "Michael C. Hall"],
+    onde_assistir: ["Netflix"],
+    sinopse: "Um detetive da Filadélfia fica obcecado com uma assassina misteriosamente reaparece a cada nove anos sem envelhecer. Sua obsessão destrói sua vida enquanto ele tenta desvendar o impossível segredo dela."
+  },
+  {
+    slug: "blade-runner-1982", titulo_pt: "Blade Runner: O Caçador de Androides", titulo_en: "Blade Runner", tipo: "Filme", ano: 1982,
+    genero: ["Ficção Científica", "Suspense", "Neo-noir"],
+    nota_imdb: 8.1, diretor: "Ridley Scott",
+    elenco: ["Harrison Ford", "Rutger Hauer", "Sean Young", "Daryl Hannah"],
+    onde_assistir: ["Prime Video", "Max"],
+    sinopse: "Em 2019, o detetive Deckard é contratado para caçar e eliminar replicantes — andróides quase humanos — que escaparam de colônias espaciais. Uma obra-prima do cinema noir futurista que questiona o que significa ser humano."
+  },
+  {
+    slug: "blade-runner-2049", titulo_pt: "Blade Runner 2049", titulo_en: "Blade Runner 2049", tipo: "Filme", ano: 2017,
+    genero: ["Ficção Científica", "Drama", "Neo-noir"],
+    nota_imdb: 8.0, diretor: "Denis Villeneuve",
+    elenco: ["Ryan Gosling", "Harrison Ford", "Ana de Armas", "Sylvia Hoeks", "Robin Wright"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Trinta anos após os eventos do original, o blade runner K descobre um segredo enterrado que pode mergulhar a sociedade no caos. Sua investigação o leva a encontrar Rick Deckard, desaparecido há décadas. Visualmente deslumbrante."
+  },
+  {
+    slug: "wolf-of-wall-street-2013", titulo_pt: "O Lobo de Wall Street", titulo_en: "The Wolf of Wall Street", tipo: "Filme", ano: 2013,
+    genero: ["Biografia", "Comédia", "Crime"],
+    nota_imdb: 8.2, diretor: "Martin Scorsese",
+    elenco: ["Leonardo DiCaprio", "Jonah Hill", "Margot Robbie", "Matthew McConaughey", "Kyle Chandler"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Baseado na história real de Jordan Belfort, corretor de Wall Street que construiu um império de fraudes, drogas e excesso na década de 1990. Uma sátira hipnótica sobre ganância e a corrupção do sonho americano."
+  },
+  {
+    slug: "once-upon-a-time-hollywood-2019", titulo_pt: "Era Uma Vez em… Hollywood", titulo_en: "Once Upon a Time in Hollywood", tipo: "Filme", ano: 2019,
+    genero: ["Drama", "Comédia"],
+    nota_imdb: 7.6, diretor: "Quentin Tarantino",
+    elenco: ["Leonardo DiCaprio", "Brad Pitt", "Margot Robbie", "Al Pacino", "Kurt Russell"],
+    onde_assistir: ["Netflix", "Prime Video"],
+    sinopse: "Hollywood, 1969. Um astro de faroeste em declínio e seu dublê percorrem uma indústria em transformação. Paralelo a isso, Sharon Tate vive seus últimos dias de inocência. Uma carta de amor melancólica e revisionista ao cinema."
+  },
+  {
+    slug: "spider-man-2002", titulo_pt: "Homem-Aranha", titulo_en: "Spider-Man", tipo: "Filme", ano: 2002,
+    genero: ["Super-herói", "Ação", "Aventura"],
+    nota_imdb: 7.4, diretor: "Sam Raimi",
+    elenco: ["Tobey Maguire", "Kirsten Dunst", "Willem Dafoe", "James Franco"],
+    onde_assistir: ["Netflix", "Prime Video"],
+    sinopse: "O estudante Peter Parker é picado por uma aranha radioativa e ganha poderes extraordinários. Ao falhar em impedir o crime que mata seu tio, ele abraça sua responsabilidade de proteger Nova York como o Homem-Aranha."
+  },
+  {
+    slug: "spider-man-2-2004", titulo_pt: "Homem-Aranha 2", titulo_en: "Spider-Man 2", tipo: "Filme", ano: 2004,
+    genero: ["Super-herói", "Ação", "Drama"],
+    nota_imdb: 7.4, diretor: "Sam Raimi",
+    elenco: ["Tobey Maguire", "Kirsten Dunst", "Alfred Molina", "James Franco"],
+    onde_assistir: ["Netflix", "Prime Video"],
+    sinopse: "Peter Parker luta para equilibrar sua vida pessoal em colapso com seu papel de herói. O vilão Doutor Octopus ameaça Nova York enquanto Peter questiona se vale a pena continuar sendo o Homem-Aranha. Amplamente considerado o melhor da trilogia."
+  },
+  {
+    slug: "spider-man-3-2007", titulo_pt: "Homem-Aranha 3", titulo_en: "Spider-Man 3", tipo: "Filme", ano: 2007,
+    genero: ["Super-herói", "Ação"],
+    nota_imdb: 6.3, diretor: "Sam Raimi",
+    elenco: ["Tobey Maguire", "Kirsten Dunst", "Thomas Haden Church", "Topher Grace", "James Franco"],
+    onde_assistir: ["Netflix", "Prime Video"],
+    sinopse: "Peter Parker é corrompido por uma simbiose alienígena negra que amplifica seus instintos mais sombrios. Ao mesmo tempo, enfrenta o Sandman e um novo Venom. O encerramento controverso da trilogia original."
+  },
+  {
+    slug: "breaking-bad-2008", titulo_pt: "Breaking Bad", titulo_en: "Breaking Bad", tipo: "Série", ano: 2008,
+    genero: ["Drama", "Crime", "Suspense"],
+    nota_imdb: 9.5, diretor: "Vince Gilligan",
+    elenco: ["Bryan Cranston", "Aaron Paul", "Anna Gunn", "Dean Norris", "Bob Odenkirk"],
+    onde_assistir: ["Netflix"],
+    sinopse: "Walter White, professor de química com câncer terminal, começa a produzir metanfetamina para garantir o futuro financeiro da família. O que começa como desespero se transforma em uma descida inexorável ao poder, ao orgulho e ao crime. Uma das maiores séries da história."
+  },
+  {
+    slug: "better-call-saul-2015", titulo_pt: "Better Call Saul", titulo_en: "Better Call Saul", tipo: "Série", ano: 2015,
+    genero: ["Drama", "Crime"],
+    nota_imdb: 9.0, diretor: "Vince Gilligan / Peter Gould",
+    elenco: ["Bob Odenkirk", "Jonathan Banks", "Rhea Seehorn", "Patrick Fabian", "Michael Mando"],
+    onde_assistir: ["Netflix"],
+    sinopse: "A origem de Saul Goodman: acompanhamos Jimmy McGill, um advogado de segunda linha com vocação para o carisma e a malandragem, em sua transformação no advogado do crime mais famoso de Albuquerque. Prequel de Breaking Bad que muitos consideram superior."
+  },
+  {
+    slug: "el-camino-2019", titulo_pt: "El Camino: Um Filme de Breaking Bad", titulo_en: "El Camino: A Breaking Bad Movie", tipo: "Filme", ano: 2019,
+    genero: ["Drama", "Crime", "Suspense"],
+    nota_imdb: 7.3, diretor: "Vince Gilligan",
+    elenco: ["Aaron Paul", "Jesse Plemons", "Krysten Ritter", "Charles Baker"],
+    onde_assistir: ["Netflix"],
+    sinopse: "Direto após os eventos finais de Breaking Bad, Jesse Pinkman foge e tenta construir uma nova vida longe do passado. Um epílogo cinematográfico e emocionalmente satisfatório para um dos personagens mais amados da série."
+  },
+  {
+    slug: "pluribus-2019", titulo_pt: "Pluribus", titulo_en: "Pluribus", tipo: "Filme", ano: 2019,
+    genero: ["Documentário"],
+    nota_imdb: 6.8, diretor: "Matt Ogens",
+    elenco: ["Narrado por diversas personalidades políticas"],
+    onde_assistir: ["YouTube", "Vimeo"],
+    sinopse: "Documentário que explora a crescente polarização política nos Estados Unidos e questiona se os americanos ainda conseguem encontrar um terreno comum. Analisa como as divisões ideológicas fragmentam a sociedade."
+  },
+  {
+    slug: "watchmen-serie-2019", titulo_pt: "Watchmen", titulo_en: "Watchmen", tipo: "Série", ano: 2019,
+    genero: ["Super-herói", "Drama", "Ficção Científica"],
+    nota_imdb: 8.2, diretor: "Damon Lindelof",
+    elenco: ["Regina King", "Jeremy Irons", "Don Johnson", "Jean Smart", "Yahya Abdul-Mateen II"],
+    onde_assistir: ["Max"],
+    sinopse: "Continuação da graphic novel original, ambientada em Tulsa, Oklahoma. Máscaras são proibidas e a supremacia branca ameaça a ordem. Uma policial mascarada investiga uma conspiração que conecta passado e presente de formas surpreendentes. Venceu o Emmy de Melhor Série Limitada."
+  },
+  {
+    slug: "watchmen-2009", titulo_pt: "Watchmen", titulo_en: "Watchmen", tipo: "Filme", ano: 2009,
+    genero: ["Super-herói", "Ação", "Drama"],
+    nota_imdb: 7.6, diretor: "Zack Snyder",
+    elenco: ["Jackie Earle Haley", "Patrick Wilson", "Carla Gugino", "Billy Crudup", "Matthew Goode"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Em 1985, numa América alternativa onde Nixon ainda governa, super-heróis são ilegais. Quando um ex-herói é assassinado, o paranóico Rorschach investiga uma conspiração que pode destruir o mundo. Adaptação fiel e visualmente impactante da HQ de Alan Moore."
+  },
+  {
+    slug: "kill-bill-vol1-2003", titulo_pt: "Kill Bill: Volume 1", titulo_en: "Kill Bill: Volume 1", tipo: "Filme", ano: 2003,
+    genero: ["Ação", "Crime"],
+    nota_imdb: 8.1, diretor: "Quentin Tarantino",
+    elenco: ["Uma Thurman", "Lucy Liu", "Vivica A. Fox", "Daryl Hannah", "David Carradine"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "A Noiva desperta de um coma de quatro anos e inicia uma vingança implacável contra os assassinos que destruíram sua vida. Uma explosão de violência estilizada inspirada em samurais japoneses, kung fu e spaghetti western."
+  },
+  {
+    slug: "kill-bill-vol2-2004", titulo_pt: "Kill Bill: Volume 2", titulo_en: "Kill Bill: Volume 2", tipo: "Filme", ano: 2004,
+    genero: ["Ação", "Crime", "Drama"],
+    nota_imdb: 8.0, diretor: "Quentin Tarantino",
+    elenco: ["Uma Thurman", "David Carradine", "Michael Madsen", "Daryl Hannah"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "A Noiva continua sua jornada de vingança até o encontro final com Bill. O volume 2 é mais lento, mais íntimo e mais emocional que o primeiro, revelando as camadas de uma história de amor e traição."
+  },
+  {
+    slug: "django-unchained-2012", titulo_pt: "Django Livre", titulo_en: "Django Unchained", tipo: "Filme", ano: 2012,
+    genero: ["Faroeste", "Drama", "Ação"],
+    nota_imdb: 8.5, diretor: "Quentin Tarantino",
+    elenco: ["Jamie Foxx", "Christoph Waltz", "Leonardo DiCaprio", "Kerry Washington", "Samuel L. Jackson"],
+    onde_assistir: ["Netflix", "Prime Video"],
+    sinopse: "No sul dos EUA antes da Guerra Civil, o escravo Django é libertado pelo caçador de recompensas Dr. King Schultz. Juntos, eles planejam resgatar a esposa de Django de uma violenta plantação no Mississippi. Um western revisionista visceral e poderoso."
+  },
+  {
+    slug: "pulp-fiction-1994", titulo_pt: "Pulp Fiction: Tempo de Violência", titulo_en: "Pulp Fiction", tipo: "Filme", ano: 1994,
+    genero: ["Crime", "Drama"],
+    nota_imdb: 8.9, diretor: "Quentin Tarantino",
+    elenco: ["John Travolta", "Samuel L. Jackson", "Uma Thurman", "Bruce Willis", "Harvey Keitel"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Histórias entrelaçadas de criminosos, filósofos de rua e pessoas comuns no submundo de Los Angeles. Tarantino revolucionou o cinema com diálogos afiados, estrutura não-linear e uma estética pop que influencia o cinema até hoje."
+  },
+  {
+    slug: "akira-1988", titulo_pt: "Akira", titulo_en: "Akira", tipo: "Filme", ano: 1988,
+    genero: ["Animação", "Ficção Científica", "Ação"],
+    nota_imdb: 8.0, diretor: "Katsuhiro Otomo",
+    elenco: ["Mitsuo Iwata", "Nozomu Sasaki", "Mami Koyama"],
+    onde_assistir: ["Netflix", "Prime Video", "Crunchyroll"],
+    sinopse: "Neo-Tokyo, 2019. Após o amigo Tetsuo manifestar poderes psíquicos incontroláveis, o líder de gangue Kaneda tenta salvá-lo de experimentos militares. Um marco do cinema de animação que definiu o cyberpunk e influenciou gerações de cineastas."
+  },
+  {
+    slug: "the-matrix-1999", titulo_pt: "Matrix", titulo_en: "The Matrix", tipo: "Filme", ano: 1999,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 8.7, diretor: "Lilly Wachowski / Lana Wachowski",
+    elenco: ["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss", "Hugo Weaving"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Neo, um hacker, descobre que a realidade é uma simulação criada por máquinas para escravizar a humanidade. Ao ser libertado, ele assume seu papel como o escolhido para liderar a resistência. Um divisor de águas do cinema de ação e ficção científica."
+  },
+  {
+    slug: "matrix-reloaded-2003", titulo_pt: "Matrix Reloaded", titulo_en: "The Matrix Reloaded", tipo: "Filme", ano: 2003,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 7.2, diretor: "Lilly Wachowski / Lana Wachowski",
+    elenco: ["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss", "Hugo Weaving", "Jada Pinkett Smith"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Neo, Trinity e Morpheus continuam a guerra contra as máquinas. Neo deve chegar ao Arquiteto da Matrix antes que o exército de sentinelas destrua Zion, o último reduto humano. Expande o universo com cenas de ação espetaculares."
+  },
+  {
+    slug: "matrix-revolutions-2003", titulo_pt: "Matrix Revolutions", titulo_en: "The Matrix Revolutions", tipo: "Filme", ano: 2003,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 6.8, diretor: "Lilly Wachowski / Lana Wachowski",
+    elenco: ["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss", "Hugo Weaving"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "A batalha final entre humanos e máquinas. Neo faz uma última viagem até a Cidade das Máquinas para propor um acordo que pode salvar tanto Zion quanto a Matrix. O encerramento épico — e divisivo — da trilogia original."
+  },
+  {
+    slug: "matrix-resurrections-2021", titulo_pt: "Matrix Resurrections", titulo_en: "The Matrix Resurrections", tipo: "Filme", ano: 2021,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 5.7, diretor: "Lana Wachowski",
+    elenco: ["Keanu Reeves", "Carrie-Anne Moss", "Yahya Abdul-Mateen II", "Jessica Henwick", "Neil Patrick Harris"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Décadas após as revoluções, Thomas Anderson vive como um bem-sucedido designer de games, sem memória de ser Neo. Uma nova versão da Matrix o envolve em uma missão para encontrar Trinity. Um retorno meta e autoconsciente ao universo."
+  },
+  {
+    slug: "animatrix-2003", titulo_pt: "Animatrix", titulo_en: "The Animatrix", tipo: "Filme", ano: 2003,
+    genero: ["Animação", "Ficção Científica", "Ação"],
+    nota_imdb: 7.4, diretor: "Vários (Mahiro Maeda, Koji Morimoto, Peter Chung e outros)",
+    elenco: ["Keanu Reeves", "Carrie-Anne Moss"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "Coletânea de nove curtas de animação que expandem o universo de Matrix, explorando sua origem, histórias paralelas e personagens secundários. Colaboração entre as Wachowski e os maiores animadores japoneses da época."
+  },
+  {
+    slug: "hellboy-2004", titulo_pt: "Hellboy", titulo_en: "Hellboy", tipo: "Filme", ano: 2004,
+    genero: ["Super-herói", "Ação", "Fantasia"],
+    nota_imdb: 6.9, diretor: "Guillermo del Toro",
+    elenco: ["Ron Perlman", "John Hurt", "Selma Blair", "Rupert Evans", "Karel Roden"],
+    onde_assistir: ["Prime Video", "Telecine"],
+    sinopse: "Invocado pelos nazistas durante a Segunda Guerra, o demônio Hellboy foi resgatado pelos Aliados e criado para proteger o mundo. Agora adulto, ele trabalha para uma agência secreta investigando o sobrenatural com seu charme irresistível."
+  },
+  {
+    slug: "hellboy-2-2008", titulo_pt: "Hellboy II: O Exército Dourado", titulo_en: "Hellboy II: The Golden Army", tipo: "Filme", ano: 2008,
+    genero: ["Super-herói", "Ação", "Fantasia"],
+    nota_imdb: 7.0, diretor: "Guillermo del Toro",
+    elenco: ["Ron Perlman", "Selma Blair", "Doug Jones", "Seth MacFarlane", "Luke Goss"],
+    onde_assistir: ["Prime Video", "Telecine"],
+    sinopse: "Um príncipe élfico desperta o lendário Exército Dourado para destruir a humanidade. Hellboy e sua equipe devem impedi-lo. Del Toro expande o universo com criaturas fantásticas ainda mais elaboradas e visualmente deslumbrantes."
+  },
+  {
+    slug: "hellboy-2019", titulo_pt: "Hellboy", titulo_en: "Hellboy", tipo: "Filme", ano: 2019,
+    genero: ["Super-herói", "Ação", "Terror"],
+    nota_imdb: 5.3, diretor: "Neil Marshall",
+    elenco: ["David Harbour", "Milla Jovovich", "Ian McShane", "Sasha Lane", "Daniel Dae Kim"],
+    onde_assistir: ["Prime Video", "Telecine"],
+    sinopse: "Reboot sombrio e violento da franquia. Hellboy enfrenta a Rainha do Sangue, uma feiticeira medieval ressuscitada que planeja destruir a humanidade com uma praga. Menos aclamado que as versões de Del Toro."
+  },
+  {
+    slug: "constantine-2005", titulo_pt: "Constantine", titulo_en: "Constantine", tipo: "Filme", ano: 2005,
+    genero: ["Fantasia", "Terror", "Ação"],
+    nota_imdb: 7.0, diretor: "Francis Lawrence",
+    elenco: ["Keanu Reeves", "Rachel Weisz", "Tilda Swinton", "Peter Stormare", "Djimon Hounsou"],
+    onde_assistir: ["Max", "Prime Video"],
+    sinopse: "John Constantine, um exorcista cínico que pode ver anjos e demônios, investiga o suicídio da irmã de uma policial. Ele descobre uma conspiração para trazer o filho do diabo à Terra. Adaptação sombria e estilosa do personagem da DC/Vertigo."
+  },
+  {
+    slug: "underworld-2003", titulo_pt: "Anjos da Noite", titulo_en: "Underworld", tipo: "Filme", ano: 2003,
+    genero: ["Ação", "Terror", "Fantasia"],
+    nota_imdb: 7.0, diretor: "Len Wiseman",
+    elenco: ["Kate Beckinsale", "Scott Speedman", "Michael Sheen", "Shane Brolly"],
+    onde_assistir: ["Prime Video", "Telecine"],
+    sinopse: "Selene, uma vampira guerreira, protege seu clã dos lobisomens. Mas quando se apaixona por um humano com um segredo misterioso, ela descobre uma conspiração que abala séculos de guerra entre as duas espécies."
+  },
+  {
+    slug: "underworld-evolution-2006", titulo_pt: "Anjos da Noite: A Evolução", titulo_en: "Underworld: Evolution", tipo: "Filme", ano: 2006,
+    genero: ["Ação", "Terror", "Fantasia"],
+    nota_imdb: 6.7, diretor: "Len Wiseman",
+    elenco: ["Kate Beckinsale", "Scott Speedman", "Tony Curran", "Derek Jacobi"],
+    onde_assistir: ["Prime Video"],
+    sinopse: "Selene e Michael fogem enquanto investigam as origens dos clãs de vampiros e lobisomens. O imortal Markus, o primeiro vampiro, desperta e ameaça destruir tudo. A continuação direta do primeiro filme."
+  },
+  {
+    slug: "underworld-rise-2009", titulo_pt: "Anjos da Noite: A Rebelião", titulo_en: "Underworld: Rise of the Lycans", tipo: "Filme", ano: 2009,
+    genero: ["Ação", "Terror", "Fantasia"],
+    nota_imdb: 6.6, diretor: "Patrick Tatopoulos",
+    elenco: ["Michael Sheen", "Bill Nighy", "Rhona Mitra"],
+    onde_assistir: ["Prime Video"],
+    sinopse: "Prequel que conta a origem da guerra entre vampiros e lobisomens. Lucian, o primeiro licantropo a manter a razão humana, se rebela contra os vampiros para libertar seu povo e viver seu amor proibido pela filha de Viktor."
+  },
+  {
+    slug: "underworld-awakening-2012", titulo_pt: "Anjos da Noite: O Despertar", titulo_en: "Underworld: Awakening", tipo: "Filme", ano: 2012,
+    genero: ["Ação", "Terror", "Ficção Científica"],
+    nota_imdb: 6.3, diretor: "Måns Mårlind / Björn Stein",
+    elenco: ["Kate Beckinsale", "Stephen Rea", "Michael Ealy", "India Eisley"],
+    onde_assistir: ["Prime Video"],
+    sinopse: "Humanos descobrem a existência de vampiros e lobisomens e os caçam quase até a extinção. Selene escapa de 12 anos de congelamento criogênico e descobre que tem uma filha com poderes únicos."
+  },
+  {
+    slug: "underworld-blood-wars-2016", titulo_pt: "Anjos da Noite: Guerras de Sangue", titulo_en: "Underworld: Blood Wars", tipo: "Filme", ano: 2016,
+    genero: ["Ação", "Terror", "Fantasia"],
+    nota_imdb: 5.8, diretor: "Anna Foerster",
+    elenco: ["Kate Beckinsale", "Theo James", "Lara Pulver", "Tobias Menzies"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Selene luta em duas frentes: contra os lobisomens que querem seu sangue e contra vampiros traidores. Busca refúgio em um covil nórdico enquanto tenta acabar com a guerra de uma vez por todas."
+  },
+  {
+    slug: "ray-2004", titulo_pt: "Ray", titulo_en: "Ray", tipo: "Filme", ano: 2004,
+    genero: ["Biografia", "Drama", "Música"],
+    nota_imdb: 7.7, diretor: "Taylor Hackford",
+    elenco: ["Jamie Foxx", "Kerry Washington", "Regina King", "Clifton Powell"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Cinebiografia de Ray Charles, o lendário músico que ficou cego aos seis anos e revolucionou a música americana misturando blues, gospel e jazz. Jamie Foxx ganhou o Oscar com uma performance transcendente."
+  },
+  {
+    slug: "potc-1-2003", titulo_pt: "Piratas do Caribe: A Maldição do Pérola Negra", titulo_en: "Pirates of the Caribbean: The Curse of the Black Pearl", tipo: "Filme", ano: 2003,
+    genero: ["Aventura", "Ação", "Fantasia"],
+    nota_imdb: 8.1, diretor: "Gore Verbinski",
+    elenco: ["Johnny Depp", "Orlando Bloom", "Keira Knightley", "Geoffrey Rush"],
+    onde_assistir: ["Disney+"],
+    sinopse: "O excêntrico capitão Jack Sparrow une forças com o ferreiro Will Turner para resgatar Elizabeth Swann dos piratas fantasmas do Capitão Barbossa. A apresentação icônica de Jack Sparrow, um dos personagens mais carismáticos do cinema moderno."
+  },
+  {
+    slug: "potc-2-2006", titulo_pt: "Piratas do Caribe: O Baú da Morte", titulo_en: "Pirates of the Caribbean: Dead Man's Chest", tipo: "Filme", ano: 2006,
+    genero: ["Aventura", "Ação", "Fantasia"],
+    nota_imdb: 7.4, diretor: "Gore Verbinski",
+    elenco: ["Johnny Depp", "Orlando Bloom", "Keira Knightley", "Bill Nighy"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Jack Sparrow está em dívida com Davy Jones, comandante do navio fantasma Holandês Voador. Para escapar do destino, ele precisa encontrar o Baú do Homem Morto. Uma sequência épica e visualmente estonteante."
+  },
+  {
+    slug: "potc-3-2007", titulo_pt: "Piratas do Caribe: No Fim do Mundo", titulo_en: "Pirates of the Caribbean: At World's End", tipo: "Filme", ano: 2007,
+    genero: ["Aventura", "Ação", "Fantasia"],
+    nota_imdb: 7.1, diretor: "Gore Verbinski",
+    elenco: ["Johnny Depp", "Orlando Bloom", "Keira Knightley", "Bill Nighy", "Chow Yun-fat"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Jack Sparrow deve ser resgatado do mundo dos mortos para que os piratas possam se unir contra a Companhia das Índias Orientais. O grandioso e complexo fechamento da trilogia original."
+  },
+  {
+    slug: "potc-4-2011", titulo_pt: "Piratas do Caribe: Navegando em Águas Misteriosas", titulo_en: "Pirates of the Caribbean: On Stranger Tides", tipo: "Filme", ano: 2011,
+    genero: ["Aventura", "Ação", "Fantasia"],
+    nota_imdb: 6.6, diretor: "Rob Marshall",
+    elenco: ["Johnny Depp", "Penélope Cruz", "Ian McShane", "Geoffrey Rush"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Jack Sparrow embarca em uma busca pela Fonte da Juventude, cruzando caminhos com o terrível Barba-Negra e uma paixão antiga. Primeiro filme sem Orlando Bloom e Keira Knightley na franquia."
+  },
+  {
+    slug: "potc-5-2017", titulo_pt: "Piratas do Caribe: A Vingança de Salazar", titulo_en: "Pirates of the Caribbean: Dead Men Tell No Tales", tipo: "Filme", ano: 2017,
+    genero: ["Aventura", "Ação", "Fantasia"],
+    nota_imdb: 6.5, diretor: "Joachim Rønning / Espen Sandberg",
+    elenco: ["Johnny Depp", "Javier Bardem", "Brenton Thwaites", "Kaya Scodelario", "Geoffrey Rush"],
+    onde_assistir: ["Disney+"],
+    sinopse: "O Capitão Salazar e seu exército de piratas mortos escapam do Triângulo do Diabo para se vingar de Jack Sparrow. O filho de Will Turner busca o Tridente de Posêidon para salvar o pai."
+  },
+  {
+    slug: "planet-of-apes-1968", titulo_pt: "Planeta dos Macacos", titulo_en: "Planet of the Apes", tipo: "Filme", ano: 1968,
+    genero: ["Ficção Científica", "Drama"],
+    nota_imdb: 8.0, diretor: "Franklin J. Schaffner",
+    elenco: ["Charlton Heston", "Roddy McDowall", "Kim Hunter", "Maurice Evans"],
+    onde_assistir: ["Disney+", "Prime Video"],
+    sinopse: "Astronautas chegam a um planeta onde macacos inteligentes dominam humanos primitivos. O clássico de ficção científica que desafia as noções de civilização com um dos finais mais icônicos da história do cinema."
+  },
+  {
+    slug: "beneath-planet-apes-1970", titulo_pt: "De Volta ao Planeta dos Macacos", titulo_en: "Beneath the Planet of the Apes", tipo: "Filme", ano: 1970,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 5.9, diretor: "Ted Post",
+    elenco: ["James Franciscus", "Charlton Heston", "Kim Hunter", "Maurice Evans"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Um segundo astronauta chega ao planeta em busca do grupo anterior e descobre, abaixo das ruínas de Nova York, uma civilização de mutantes telepáticos que adoram uma bomba atômica."
+  },
+  {
+    slug: "escape-planet-apes-1971", titulo_pt: "Fuga do Planeta dos Macacos", titulo_en: "Escape from the Planet of the Apes", tipo: "Filme", ano: 1971,
+    genero: ["Ficção Científica", "Drama"],
+    nota_imdb: 6.4, diretor: "Don Taylor",
+    elenco: ["Roddy McDowall", "Kim Hunter", "Bradford Dillman"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Três macacos viajam no tempo para a Terra dos anos 1970 e são recebidos com fascínio — até as autoridades perceberem o perigo que representam para o futuro da humanidade. Uma virada inteligente na franquia."
+  },
+  {
+    slug: "conquest-planet-apes-1972", titulo_pt: "A Conquista do Planeta dos Macacos", titulo_en: "Conquest of the Planet of the Apes", tipo: "Filme", ano: 1972,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 6.2, diretor: "J. Lee Thompson",
+    elenco: ["Roddy McDowall", "Don Murray", "Ricardo Montalbán"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Ambientado em 1991, os macacos são escravizados pela humanidade. César, filho de Cornelius e Zira, lidera a primeira revolução dos símios. A origem da dominação dos macacos começa a tomar forma."
+  },
+  {
+    slug: "battle-planet-apes-1973", titulo_pt: "A Batalha do Planeta dos Macacos", titulo_en: "Battle for the Planet of the Apes", tipo: "Filme", ano: 1973,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 5.5, diretor: "J. Lee Thompson",
+    elenco: ["Roddy McDowall", "Claude Akins", "Natalie Trundy", "Lew Ayres"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Após a revolução, César tenta estabelecer uma coexistência pacífica entre humanos e macacos. Mas forças internas e os mutantes sobreviventes ameaçam a nova ordem. O encerramento da franquia original."
+  },
+  {
+    slug: "planet-apes-2001", titulo_pt: "Planeta dos Macacos", titulo_en: "Planet of the Apes", tipo: "Filme", ano: 2001,
+    genero: ["Ficção Científica", "Ação"],
+    nota_imdb: 5.7, diretor: "Tim Burton",
+    elenco: ["Mark Wahlberg", "Tim Roth", "Helena Bonham Carter", "Michael Clarke Duncan"],
+    onde_assistir: ["Disney+"],
+    sinopse: "Reboot da franquia clássica. Um astronauta prende em um planeta dominado por macacos evoluídos e lidera a resistência humana. Visualmente elaborado mas criticado pelo final confuso."
+  },
+  {
+    slug: "rise-planet-apes-2011", titulo_pt: "Planeta dos Macacos: A Origem", titulo_en: "Rise of the Planet of the Apes", tipo: "Filme", ano: 2011,
+    genero: ["Ficção Científica", "Drama", "Ação"],
+    nota_imdb: 7.6, diretor: "Rupert Wyatt",
+    elenco: ["James Franco", "Andy Serkis", "John Lithgow", "Freida Pinto"],
+    onde_assistir: ["Disney+", "Prime Video"],
+    sinopse: "Um cientista cria uma droga para curar o Alzheimer e inadvertidamente confere inteligência superior a um chimpanzé chamado César. O início da nova e aclamada trilogia que reinventou a franquia com CGI revolucionário."
+  },
+  {
+    slug: "dawn-planet-apes-2014", titulo_pt: "Planeta dos Macacos: O Confronto", titulo_en: "Dawn of the Planet of the Apes", tipo: "Filme", ano: 2014,
+    genero: ["Ficção Científica", "Drama", "Ação"],
+    nota_imdb: 7.6, diretor: "Matt Reeves",
+    elenco: ["Andy Serkis", "Jason Clarke", "Gary Oldman", "Keri Russell", "Toby Kebbell"],
+    onde_assistir: ["Disney+", "Prime Video"],
+    sinopse: "Uma década após o vírus dizimar a humanidade, humanos sobreviventes e a nação dos símios de César tentam coexistir. Mas a desconfiança e traidores dos dois lados empurram os grupos para uma guerra inevitável."
+  },
+  {
+    slug: "war-planet-apes-2017", titulo_pt: "Planeta dos Macacos: A Guerra", titulo_en: "War for the Planet of the Apes", tipo: "Filme", ano: 2017,
+    genero: ["Ficção Científica", "Drama", "Ação"],
+    nota_imdb: 7.4, diretor: "Matt Reeves",
+    elenco: ["Andy Serkis", "Woody Harrelson", "Steve Zahn", "Amiah Miller"],
+    onde_assistir: ["Disney+", "Prime Video"],
+    sinopse: "César lidera seus símios contra um exército humano implacável comandado pelo Coronel. Após uma tragédia pessoal devastadora, César embarca em uma jornada de vingança que testará sua humanidade. O épico e emocionante desfecho da trilogia."
+  },
+  {
+    slug: "king-kong-2005", titulo_pt: "King Kong", titulo_en: "King Kong", tipo: "Filme", ano: 2005,
+    genero: ["Aventura", "Drama", "Ficção Científica"],
+    nota_imdb: 7.2, diretor: "Peter Jackson",
+    elenco: ["Naomi Watts", "Jack Black", "Adrien Brody", "Andy Serkis"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Nos anos 1930, uma equipe cinematográfica viaja à misteriosa Ilha Caveira e encontra Kong, um gorila gigantesco. Capturado e levado a Nova York, o monstro desenvolve uma conexão trágica com a atriz Ann Darrow. A mais ambiciosa refilmagem do clássico."
+  },
+  {
+    slug: "hulk-2003", titulo_pt: "Hulk", titulo_en: "Hulk", tipo: "Filme", ano: 2003,
+    genero: ["Super-herói", "Ação", "Drama"],
+    nota_imdb: 5.7, diretor: "Ang Lee",
+    elenco: ["Eric Bana", "Jennifer Connelly", "Sam Elliott", "Nick Nolte"],
+    onde_assistir: ["Prime Video"],
+    sinopse: "Bruce Banner, cientista exposto a radiação gama, se transforma no Hulk quando fica irado — um gigante verde indestrutível. Ang Lee tenta uma abordagem psicológica e operística que dividiu crítica e público."
+  },
+  {
+    slug: "the-boroughs-2017", titulo_pt: "The Boroughs", titulo_en: "The Boroughs", tipo: "Filme", ano: 2017,
+    genero: ["Terror", "Mistério"],
+    nota_imdb: 4.2, diretor: "Lonnie Martin",
+    elenco: ["James Martinez", "Rebecca Kush", "Emily Pearse"],
+    onde_assistir: ["Prime Video"],
+    sinopse: "Uma família se muda para uma comunidade fechada aparentemente perfeita e começa a perceber que os vizinhos escondem segredos perturbadores. Um thriller de terror que explora o lado sombrio das comunidades idealizadas."
+  },
+  {
+    slug: "tropic-thunder-2008", titulo_pt: "Trovão Tropical", titulo_en: "Tropic Thunder", tipo: "Filme", ano: 2008,
+    genero: ["Comédia", "Ação"],
+    nota_imdb: 7.0, diretor: "Ben Stiller",
+    elenco: ["Ben Stiller", "Jack Black", "Robert Downey Jr.", "Tom Cruise", "Nick Nolte"],
+    onde_assistir: ["Prime Video", "Netflix"],
+    sinopse: "Um grupo de atores mimados filmando um épico de guerra é abandonado na selva real por um diretor desesperado. Eles se veem no meio de um conflito verdadeiro achando que ainda é tudo filmagem. Sátira feroz de Hollywood com uma performance memorável de Robert Downey Jr."
+  }
+];
+
+</script>
+<script>
+// ── STATE ──
+const STORAGE_KEY = 'minhalista_catalog_v1';
+let catalog = [];
+let activeFilter = 'todos';
+let searchQuery = '';
+
+// ── INIT ──
+function init() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        catalog = parsed;
+        render();
+        return;
+      }
+    }
+  } catch(e) {}
+  // Primeira vez: usar dados embutidos
+  catalog = [...CATALOG];
+  persist();
+  render();
+
+
+}
+
+// ── PERSIST ──
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(catalog)); } catch(e) {}
+}
+
+// ── RENDER LIST ──
+function render() {
+  const list = document.getElementById('list');
+  const q = searchQuery.toLowerCase().trim();
+
+  let items = catalog.filter(item => {
+    const matchFilter = activeFilter === 'todos'
+      || (activeFilter === 'filme' && item.tipo === 'Filme')
+      || (activeFilter === 'serie' && item.tipo === 'Série');
+
+    const matchSearch = !q
+      || item.titulo_pt.toLowerCase().includes(q)
+      || item.titulo_en.toLowerCase().includes(q)
+      || (item.genero || []).some(g => g.toLowerCase().includes(q))
+      || (item.diretor || '').toLowerCase().includes(q)
+      || (item.elenco || []).some(a => a.toLowerCase().includes(q));
+
+    return matchFilter && matchSearch;
+  });
+
+  // Stats
+  const filmes = catalog.filter(i => i.tipo === 'Filme').length;
+  const series = catalog.filter(i => i.tipo === 'Série').length;
+  document.getElementById('stat-filmes').textContent = filmes;
+  document.getElementById('stat-series').textContent = series;
+
+  if (items.length === 0) {
+    list.innerHTML = `<div class="empty">
+      <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path d="M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"/></svg>
+      <span>Nenhuma obra encontrada</span>
+    </div>`;
+    return;
+  }
+
+  // Separar em grupos se não estiver filtrando por tipo
+  let html = '';
+
+  if (activeFilter === 'todos' && !q) {
+    const filmesList = items.filter(i => i.tipo === 'Filme');
+    const seriesList = items.filter(i => i.tipo === 'Série');
+    if (seriesList.length) {
+      html += `<div class="list-section-title">Séries — ${seriesList.length}</div>`;
+      html += seriesList.map((item, i) => cardHTML(item, i + 1)).join('');
+    }
+    if (filmesList.length) {
+      html += `<div class="list-section-title">Filmes — ${filmesList.length}</div>`;
+      html += filmesList.map((item, i) => cardHTML(item, i + 1)).join('');
+    }
+  } else {
+    html = items.map((item, i) => cardHTML(item, i + 1)).join('');
+  }
+
+  list.innerHTML = html;
+
+  // Events
+  list.querySelectorAll('.card').forEach(el => {
+    el.addEventListener('click', () => {
+      const slug = el.dataset.slug;
+      const item = catalog.find(c => c.slug === slug);
+      if (item) openModal(item);
+    });
+  });
+}
+
+function cardHTML(item, index) {
+  const genres = (item.genero || []).slice(0, 2).join(' · ');
+  const badgeClass = item.tipo === 'Série' ? 'serie' : 'filme';
+  const dirShort = (item.diretor || '').split('/')[0].trim().split(' ').slice(-1)[0];
+  return `
+    <div class="card" data-slug="${item.slug}">
+      <div class="card-index">${String(index).padStart(2,'0')}</div>
+      <div class="card-body">
+        <div class="card-title">${item.titulo_pt}</div>
+        <div class="card-meta">
+          <span class="type-badge ${badgeClass}">${item.tipo}</span>
+          <span class="card-year">${item.ano}</span>
+        </div>
+        <div class="card-genres">${genres}</div>
+      </div>
+      <div class="card-right">
+        <div class="imdb-score">
+          <span class="imdb-star">★</span>
+          <span class="imdb-num">${item.nota_imdb || '—'}</span>
+        </div>
+        <div class="card-dir">${dirShort}</div>
+      </div>
+    </div>`;
+}
+
+// ── MODAL ──
+function openModal(item) {
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  const badgeClass = item.tipo === 'Série' ? 'serie' : 'filme';
+  const elenco = (item.elenco || []).join(', ');
+  const streaming = (item.onde_assistir || []).join(' · ');
+  const genres = (item.genero || []).map(g => `<span class="genre-pill">${g}</span>`).join('');
+
+  content.innerHTML = `
+    <div class="modal-header">
+      <div class="modal-type-row">
+        <span class="type-badge ${badgeClass}">${item.tipo}</span>
+        <span style="font-size:11px;color:var(--muted)">${item.ano}</span>
+      </div>
+      <div class="modal-title">${item.titulo_pt}</div>
+      ${item.titulo_pt !== item.titulo_en ? `<div class="modal-title-en">${item.titulo_en}</div>` : ''}
+    </div>
+
+    <div class="modal-score-row">
+      <div class="modal-imdb">
+        <div class="big-score">${item.nota_imdb || '—'}</div>
+        <div class="score-label">IMDb</div>
+      </div>
+      <div class="score-divider"></div>
+      <div class="modal-genres">${genres}</div>
+    </div>
+
+    ${item.diretor ? `
+    <div class="modal-section">
+      <div class="section-label">${item.tipo === 'Série' ? 'Criador / Showrunner' : 'Diretor'}</div>
+      <div class="section-value">${item.diretor}</div>
+    </div>` : ''}
+
+    ${elenco ? `
+    <div class="modal-section">
+      <div class="section-label">Elenco</div>
+      <div class="section-value">${elenco}</div>
+    </div>` : ''}
+
+    ${streaming ? `
+    <div class="modal-section">
+      <div class="section-label">Onde Assistir</div>
+      <div class="section-value highlight">${streaming}</div>
+    </div>` : ''}
+
+    ${item.sinopse ? `
+    <div class="modal-section">
+      <div class="section-label">Sinopse</div>
+      <div class="sinopse-block">${item.sinopse}</div>
+    </div>` : ''}
+  `;
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+// ── FILTERS ──
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.f;
+    render();
+  });
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value;
+  render();
+});
+
+// ── ADD TITLE ──
+const addInput  = document.getElementById('add-input');
+const addBtn    = document.getElementById('add-btn');
+const addStatus = document.getElementById('add-status');
+
+async function addTitle() {
+  const raw = addInput.value.trim();
+  if (!raw) return;
+
+  addBtn.disabled = true;
+  addStatus.className = '';
+  addStatus.innerHTML = '<span class="loader"></span>Buscando informações...';
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `Você é especialista em cinema e séries. Para o título fornecido, retorne APENAS um objeto JSON (sem markdown, sem código, sem explicação) com estes campos exatos:
+{
+  "titulo_pt": "Título em português",
+  "titulo_en": "Título em inglês original",
+  "tipo": "Filme",
+  "ano": 1999,
+  "genero": ["Ação"],
+  "nota_imdb": 8.7,
+  "diretor": "Nome",
+  "elenco": ["Ator 1", "Ator 2", "Ator 3", "Ator 4"],
+  "onde_assistir": ["Netflix"],
+  "sinopse": "2-3 frases em português.",
+  "slug": "titulo-ano"
+}
+Tipo deve ser exatamente "Filme" ou "Série".
+Retorne SOMENTE o JSON.`,
+        messages: [{ role: 'user', content: `Título: ${raw}` }]
+      })
+    });
+
+    const data = await response.json();
+    const text = (data.content || []).find(b => b.type === 'text')?.text || '';
+    const clean = text.replace(/```json|```/g, '').trim();
+    const item = JSON.parse(clean);
+
+    // Garantir slug único
+    if (!item.slug) item.slug = raw.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + item.ano;
+    if (catalog.find(c => c.slug === item.slug)) {
+      item.slug = item.slug + '-' + Date.now();
+    }
+
+    catalog.push(item);
+    persist();
+    render();
+
+    addInput.value = '';
+    addStatus.className = 'success';
+    addStatus.textContent = `✓ "${item.titulo_pt}" adicionado`;
+    setTimeout(() => { addStatus.textContent = ''; }, 3000);
+
+  } catch(err) {
+    addStatus.className = 'error';
+    addStatus.textContent = 'Não foi possível buscar. Tente novamente.';
+  }
+
+  addBtn.disabled = false;
+}
+
+addBtn.addEventListener('click', addTitle);
+addInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTitle(); });
+
+// ── START ──
+init();
+</script>
+</body>
+</html>
