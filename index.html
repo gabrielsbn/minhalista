@@ -1434,30 +1434,14 @@ async function addTitle() {
   addStatus.innerHTML = '<span class="loader"></span>Buscando informações...';
 
   try {
-    const response = await fetch('https://jolly-firefly-f54f.bielbrandao07.workers.dev', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: `Você é especialista em cinema e séries. Para o título fornecido, retorne APENAS um objeto JSON válido, sem markdown, sem blocos de código, sem qualquer texto fora do JSON. Use exatamente estes campos:
-{"titulo_pt":"string","titulo_en":"string","tipo":"Filme","ano":1999,"genero":["string"],"nota_imdb":8.5,"diretor":"string","elenco":["string"],"onde_assistir":["string"],"sinopse":"string","slug":"string"}
-Regras: tipo deve ser exatamente "Filme" ou "Série". slug deve ser titulo-ano em minúsculas sem acentos. Retorne SOMENTE o objeto JSON.`,
-        messages: [{ role: 'user', content: `Título: ${raw}` }]
-      })
-    });
+    const url = 'https://jolly-firefly-f54f.bielbrandao07.workers.dev?title=' + encodeURIComponent(raw);
+    const response = await fetch(url);
+    const item = await response.json();
 
-    if (!response.ok) throw new Error('HTTP ' + response.status);
+    if (!response.ok) throw new Error(item.error || 'Não encontrado');
+    if (item.error) throw new Error(item.error);
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-
-    const text  = (data.content || []).find(b => b.type === 'text')?.text || '';
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('JSON not found');
-    const item  = JSON.parse(match[0]);
-
-    if (!item.slug) item.slug = raw.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'') + '-' + (item.ano || Date.now());
+    // Ensure unique slug
     if (catalog.find(c => c.slug === item.slug)) item.slug += '-' + Date.now();
 
     catalog.push(item);
@@ -1466,12 +1450,12 @@ Regras: tipo deve ser exatamente "Filme" ou "Série". slug deve ser titulo-ano e
 
     addInput.value = '';
     addStatus.className = 'success';
-    addStatus.textContent = `✓ "${item.titulo_pt}" adicionado`;
+    addStatus.textContent = '✓ "' + item.titulo_pt + '" adicionado';
     setTimeout(() => { addStatus.textContent = ''; }, 3000);
 
   } catch(err) {
     addStatus.className = 'error';
-    addStatus.textContent = 'Erro: ' + (err.message || 'Tente novamente');
+    addStatus.textContent = 'Não encontrado. Tente o título em inglês.';
   }
 
   addBtn.disabled = false;
@@ -1515,7 +1499,7 @@ async function sendChat() {
   const catalogSummary = catalog.map(i => `${i.titulo_pt} (${i.tipo}, ${i.ano})`).join(', ');
 
   try {
-    const response = await fetch('https://jolly-firefly-f54f.bielbrandao07.workers.dev', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
